@@ -47,13 +47,12 @@ vim mediacenter.env #modify
 Running it in background:
 ```bash
 docker run -d --name python-cron \
-  --env-file mediacenter.env \
   -v $(pwd):/usr/src/app \
   python:3-slim /bin/bash -c "
     apt-get update && apt-get install -y cron &&
     touch /var/log/cron.log &&
     pip install --no-cache-dir -r /usr/src/app/requirements.txt &&
-    echo '*/25 * * * * /usr/local/bin/python3 /usr/src/app/fetcher.py >> /var/log/cron.log 2>&1' > /etc/cron.d/mycron &&
+    echo '*/25 * * * *  /usr/src/app/entrypoint.sh >> /var/log/cron.log 2>&1' > /etc/cron.d/mycron &&
     chmod 0644 /etc/cron.d/mycron &&
     crontab /etc/cron.d/mycron &&
     cron -f"
