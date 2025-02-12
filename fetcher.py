@@ -203,12 +203,11 @@ class Checker:
             if response.status_code != 200:
                 raise self.SonarrStatusException(f"Could not check health. Response: {response.text}")
             
-            errors = response.json()
+            issues = response.json()
+            errors = [error for error in issues if error.get("type") == "error"]
             
             if len(errors) == 0:
-                return "ok"
-            
-            problems = [error for error in errors if error.get("type") == "error"]
+                return "ok
             
             raise self.SonarrStatusException(f"Sonarr health errors: {problems}")
                 
@@ -303,12 +302,11 @@ class Checker:
             if response.status_code != 200:
                 raise self.RadarrStatusException(f"Could not check health. Response: {response.text}")
             
-            errors = response.json()
-            
+            issues = response.json()
+            errors = [error for error in issues if error.get("type") == "error"]
+
             if len(errors) == 0:
                 return "ok"
-            
-            problems = [error for error in errors if error.get("type") == "error"]
             
             raise self.RadarrStatusException(f"Radarr health errors: {problems}")
                 
