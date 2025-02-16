@@ -207,7 +207,7 @@ class Checker:
             errors = [error for error in issues if error.get("type") == "error"]
             
             if len(errors) == 0:
-                return "ok
+                return "ok"
             
             raise self.SonarrStatusException(f"Sonarr health errors: {problems}")
                 
