@@ -10,12 +10,11 @@ import xml.etree.ElementTree as ET
 import json
 from collections import Counter
 
-import socket
 
 from deluge_web_client import DelugeWebClient
 import logging, sys
 
-import time, os
+import os
 from plexapi.myplex import MyPlexAccount
 
 #requirements:
@@ -209,7 +208,7 @@ class Checker:
             if len(errors) == 0:
                 return "ok"
             
-            raise self.SonarrStatusException(f"Sonarr health errors: {problems}")
+            raise self.SonarrStatusException(f"Sonarr health errors: {errors}")
                 
                 
         except Exception as e:
@@ -308,7 +307,7 @@ class Checker:
             if len(errors) == 0:
                 return "ok"
             
-            raise self.RadarrStatusException(f"Radarr health errors: {problems}")
+            raise self.RadarrStatusException(f"Radarr health errors: {errors}")
                 
                 
         except Exception as e:
