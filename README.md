@@ -46,7 +46,7 @@ vim mediacenter.env #modify
 
 Running it in background:
 ```bash
-docker run -d --name python-cron \
+docker run -d --restart=always --name python-cron \
   -v $(pwd):/usr/src/app \
   python:3-slim /bin/bash -c "
     apt-get update && apt-get install -y cron &&
