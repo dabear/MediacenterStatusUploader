@@ -78,24 +78,21 @@ class Checker:
     class PlexStatusException(ServiceStatusException):
         pass
     
-
     def __init__(self):
-        # Create a session
-        self.session = requests.Session()
-        # Load cookies from the file into the session
-        self.cookie_jar = cookiejar.MozillaCookieJar(self.cookie_file)
-        
-        # Load cookies from the file into the session
-        try:
-            # Load cookies from the file
-            self.cookie_jar.load(ignore_discard=True, ignore_expires=True)
-            self.session.cookies.update(self.cookie_jar)
-            print("Cookies loaded from file.")
-        except FileNotFoundError:
-            print("Cookie file not found. Starting with no cookies.")
-            
-        self.setup_logging()
-            
+      self.session = requests.Session()
+      self.cookie_jar = cookiejar.MozillaCookieJar(self.cookie_file)
+
+      try:
+          self.cookie_jar.load(ignore_discard=True, ignore_expires=True)
+          print(f"Cookies loaded from: {self.cookie_file}")
+      except FileNotFoundError:
+          directory = os.path.dirname(self.cookie_file)
+          if directory:
+            os.makedirs(directory, exist_ok=True)
+          self.cookie_jar.save(ignore_discard=True, ignore_expires=True)
+          print(f"Created new cookie file: {self.cookie_file}")
+
+      self.session.cookies.update(self.cookie_jar)
             
     def createStatus(self, program, subcomponent, status):
         if isinstance(status, Exception):
@@ -195,7 +192,7 @@ class Checker:
             
     #https://sonarr.tv/docs/api/
     def sonarr_check_health(self):
-        url = f"{self.SONARR_BASE_URL}/api/v3/health?apikey={self.SONARR_API_KEY}"
+        url = f"{self.SONARR_BASE_URL}api/v3/health?apikey={self.SONARR_API_KEY}"
         try:
             response = self.session.get(url, timeout=5)
             
@@ -217,7 +214,7 @@ class Checker:
         return "ok"
     
     def sonarr_check_disk_status(self):
-        url = f"{self.SONARR_BASE_URL}/api/v3/diskspace?apikey={self.SONARR_API_KEY}"
+        url = f"{self.SONARR_BASE_URL}api/v3/diskspace?apikey={self.SONARR_API_KEY}"
         
 
         try:
@@ -256,11 +253,15 @@ class Checker:
             raise self.SonarrStatusException(f"Error during ping request: {e}")
     
     def radarr_check_disk_status(self):
-        url = f"{self.RADARR_BASE_URL}/api/v3/diskspace?apikey={self.RADARR_API_KEY}"
-        
+        url = f"{self.RADARR_BASE_URL}api/v3/diskspace?apikey={self.RADARR_API_KEY}"
+        response = None
+        text = None
+        print(f"dabear radarr disk")
 
         try:
             response = self.session.get(url, timeout=5)
+            text=response.json()
+            print("response got: {text}")
             if response.status_code == 200:
                 disk_status = response.json()
                 for disk in disk_status:
@@ -269,9 +270,10 @@ class Checker:
                         raise self.RadarrStatusException(f"percentage free was less than {self.disk_percentage_threshold} for path \"{disk['path']}\"")
                     #print(f"Path: {disk['path']}, Free Space: {disk['freeSpace'] / (1024**3):.2f} GB, Total Space: {disk['totalSpace'] / (1024**3):.2f} GB, free: {percentage_free:.2f}%")
             else:
+                print(f"Disk status request failed. Status code: {response.status_code}, Response: {response.text}")
                 raise self.RadarrStatusException(f"Disk status request failed. Status code: {response.status_code}, Response: {response.text}")
         except Exception as e:
-            raise self.RadarrStatusException(f"Error during disk status request: {e}")
+            raise self.RadarrStatusException(f"Error during disk status request: {e}, response: {response}, text: {text}, url: {url}")
         
         print("radarr_check_disk_status check successful")
         return "ok"
@@ -294,7 +296,7 @@ class Checker:
             raise self.RadarrStatusException(f"Error during ping request: {e}")
 
     def radarr_check_health(self):
-        url = f"{self.RADARR_BASE_URL}/api/v3/health?apikey={self.RADARR_API_KEY}"
+        url = f"{self.RADARR_BASE_URL}api/v3/health?apikey={self.RADARR_API_KEY}"
         try:
             response = self.session.get(url, timeout=5)
             
@@ -315,7 +317,7 @@ class Checker:
             
         return "ok"
     
-    def jackett_check_indexers_status(self, i=2)->str:
+    def jackett_check_indexers_status(self, i=3)->str:
              
         # Due to weirdness and cookie issues, 
         # jackett always needs two attempts if cookies file is empty
@@ -325,7 +327,7 @@ class Checker:
         url = f"{self.JACKETT_HOST}/api/v2.0/indexers/all/results/torznab?apikey={self.JACKETT_KEY}"
         
         try:
-            response = self.session.get(url, timeout=5)
+            response = self.session.get(url, timeout=10)
             if response.status_code == 200:
                 print("response retrieved")
 
