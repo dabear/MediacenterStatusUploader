@@ -9,7 +9,7 @@ import http.cookiejar as cookiejar
 import xml.etree.ElementTree as ET
 import json
 from collections import Counter
-
+from pathlib import Path
 
 from deluge_web_client import DelugeWebClient
 import logging, sys
@@ -92,8 +92,10 @@ class Checker:
           self.cookie_jar.save(ignore_discard=True, ignore_expires=True)
           print(f"Created new cookie file: {self.cookie_file}")
 
-      self.session.cookies.update(self.cookie_jar)
-            
+      self.session.cookies = self.cookie_jar
+    def saveCookies(self):
+        self.cookie_jar.save(ignore_discard=True, ignore_expires=True)
+
     def createStatus(self, program, subcomponent, status):
         if isinstance(status, Exception):
             status = str(status)  # Convert Exception to string for JSON serialization
@@ -360,9 +362,39 @@ class Checker:
             i -= 1
             self.jackett_check_indexers_status(i)
 
+    TOKEN_FILE = Path.home() / ".plex_token"
+
+
+    def get_plex_account(self, username, password):
+        token = None
+
+        # Try loading existing token
+        if self.TOKEN_FILE.exists():
+            token = self.TOKEN_FILE.read_text().strip()
+
+        if token:
+            try:
+                print("Using saved Plex token")
+                return MyPlexAccount(token=token)
+            except Exception:
+                print("Saved token invalid, requesting new token")
+
+        # First login (or expired token)
+        print("Logging in to Plex")
+        account = MyPlexAccount(username, password)
+        token = account.authenticationToken
+
+        # Save token for future runs
+        self.TOKEN_FILE.write_text(token)
+        os.chmod(self.TOKEN_FILE, 0o600)  # owner read/write only
+        print(f"Saved Plex token to {TOKEN_FILE}")
+
+        return account
+
     def plex_check_connection(self):
         try:
-            account = MyPlexAccount(self.PLEX_USERNAME, self.PLEX_PASSWORD)
+            print("dabear: checking plex connection")
+            account = self.get_plex_account(self.PLEX_USERNAME, self.PLEX_PASSWORD)
             #print(f"all servers: { account.resources()}")
             if self.PLEX_SERVER:
                 plex = account.resource(self.PLEX_SERVER).connect() 
@@ -370,14 +402,14 @@ class Checker:
                 # we connect to the first server
                 plex = account.resources()[0].connect()
         except Exception as e:
-            raise self.PlexStatusException(f"Error getting plex server for account {self.PLEX_USERNAME}")
+            raise self.PlexStatusException(f"Error getting plex server for account {self.PLEX_USERNAME}: {e}")
         
         update_avail = False if plex.checkForUpdate() == None else True
         
         if update_avail:
             raise self.PlexStatusException("outdated plex detected")
         return "ok"
-        
+      
 
 
 
@@ -385,6 +417,6 @@ def main():
     print("yo")
     checker = Checker()
     checker.check_and_upload_status()
-
+    checker.saveCookies()
 if __name__ == "__main__":
     main()
